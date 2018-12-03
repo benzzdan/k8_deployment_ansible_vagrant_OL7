@@ -1,0 +1,98 @@
+---
+- name: Oracle proxy config and yum update
+  copy: src=../files/oracle_proxy.conf dest=/etc/apt/apt.conf owner=root group=root mode=0644
+  #Allowing the user to skip proxy setup or not depending on location of deployment.
+  tags: 
+   - proxy
+
+- shell: "yum update -y"
+
+- name: Adding repo
+  yum_repository:
+    name: kubernetes
+    description: The kubernetes repo
+    baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+    gpgcheck: yes
+    repo_gpgcheck: yes
+    enabled: yes
+    gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+
+
+- name: "Upading yum"
+  shell: "yum update -y"
+  
+- name: install docker and kubernetes
+  yum: name={{ item }} state=present 
+  with_items:
+    - docker
+    - kubelet
+    - kubeadm
+    - kubectl
+    - ntp
+
+
+##Disable swap
+
+- name: "Disabling swap"
+  shell: "swapoff -a"
+
+- lineinfile: path=/etc/fstab regexp='swap' line='#/dev/mapper/vg_main-lv_swap swap                    swap    defaults        0 0' state=present
+
+
+- name: "Disabling selinux"
+  shell: "setenforce 0"
+
+- lineinfile: path=/etc/selinux/config line="SELINUX=disabled" state=present regex='enforcing'
+
+- name: Setting cgroup line
+  lineinfile: 
+    path: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+    line: Environment="cgroup-driver=systemd/cgroup-driver=cgroupfs"
+    state: present
+    insertafter: '^Environment="KUBELET_CONFIG_ARGS'
+
+- shell: "systemctl daemon-reload"
+
+- name: Starting docker
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Starting kubelet
+  systemd:
+    name: kubelet
+    state: started
+    enabled: yes
+
+
+- name: Enabling ip forwarding
+  shell: "sysctl -w net.ipv4.ip_forward=1"
+
+- lineinfile: path=/etc/sysctl.conf regex="net.ipv4.ip_forward = 0" line="net.ipv4.ip_forward = 1" state=present
+
+
+
+#Running post configurations and activating some kernel modules
+- name: Running post configurations
+  command: modprobe {{ item }}
+  with_items:
+  - ip_vs
+  - ip_vs_rr
+  - ip_vs_wrr
+  - ip_vs_sh
+  - nf_conntrack_ipv4
+  - br_netfilter
+#Restarting services and modifying the modules file
+- lineinfile: path=/etc/modules line='{{ item }}' create=yes state=present
+  with_items:
+  - ip_vs
+  - ip_vs_rr
+  - ip_vs_wrr
+  - ip_vs_sh
+  - nf_conntrack_ipv4
+  - br_netfilter
+  - sysctl: name=net.ipv4.ip_forward value=1 state=present reload=yes sysctl_set=yes
+  - service: name=docker state=restarted enabled=yes
+  - service: name=ntp state=restarted enabled=yes
+  - service: name=kubelet state=restarted enabled=yes

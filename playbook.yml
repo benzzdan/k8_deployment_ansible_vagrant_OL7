@@ -1,0 +1,15 @@
+---
+- hosts: all
+  become: true
+  roles:
+  - basic
+
+- hosts: kmaster
+  become: true
+  roles:
+  - master
+
+- hosts: all
+  become: true
+  roles:
+  - k8join
