@@ -40,12 +40,11 @@ Vagrant.configure("2") do |config|
                 nodeconfig.vm.box = "ol7-latest"
                 nodeconfig.vm.box_url = "https://yum.oracle.com/boxes/oraclelinux/latest/ol7-latest.box"
                 nodeconfig.vm.hostname = node[:hostname]
-               
                 #Specifying the network type and name
                 nodeconfig.vm.network :private_network, ip: node[:ip], virtualbox__intnet: domain
                 nodeconfig.vm.provider :virtualbox do |vb|
                     vb.name = node[:hostname]+"."+domain
-                    vb.memory = 2000
+                    vb.memory = 2500
                     vb.cpus = 2
                     #Virtual box vbmanage custom directives, prior to boot of each box
                     vb.customize ['modifyvm', :id, '--natdnshostresolver1', 'on']
@@ -65,6 +64,8 @@ Vagrant.configure("2") do |config|
                 nodeconfig.vm.box = "ol7-latest" #image to use on each box
                 nodeconfig.vm.box_url = "https://yum.oracle.com/boxes/oraclelinux/latest/ol7-latest.box"
                 nodeconfig.vm.hostname = node[:hostname]
+                # nodeconfig.vm.forward_port 8080, 31223
+                # nodeconfig.vm.forward_port 3000, 31125
                 #Specifying the network type and name
                 nodeconfig.vm.network :private_network, ip: node[:ip], virtualbox__intnet: domain
                 nodeconfig.vm.provider :virtualbox do |vb|
