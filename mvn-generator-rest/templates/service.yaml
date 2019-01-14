@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mvn-generator-rest.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "mvn-generator-rest.name" . }}
+    helm.sh/chart: {{ include "mvn-generator-rest.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: {{ include "mvn-generator-rest.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
